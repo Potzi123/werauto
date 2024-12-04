@@ -8,23 +8,38 @@ import { Label } from "@/components/ui/label";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useRouter } from "next/navigation";
 
-export default function SignupForm() {
+export default function SignupNameForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [userName, setUserName] = useState("");
   const [error, setError] = useState("");
   const router = useRouter();
 
-  const handleSigup = async (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
-    const { error } = await supabase.auth.signUp({ email, password });
-    if (error) {
-      setError(error.message);
+    // Sign up the user
+    const { data: authData, error: authError } = await supabase.auth.signUp({ email, password });
+    if (authError) {
+      setError(authError.message);
       return;
     }
 
-    
+    // Update the user_name in the database
+    const user = authData.user;
+    if (user) {
+      const { error: updateError } = await supabase
+        .from("profiles") // Replace "profiles" with your table name
+        .update({ user_name: userName })
+        .eq("user_id", user.id); // Assuming your table has a column "id" linked to the user's ID
+      if (updateError) {
+        setError(updateError.message);
+        return;
+      }
+    }
+
+    // Redirect after successful signup
     router.push("/info/auth");
   };
 
@@ -35,7 +50,7 @@ export default function SignupForm() {
           <CardTitle className="text-2xl font-semibold text-center">Sign up</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSigup} className="space-y-4">
+          <form onSubmit={handleSignup} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -55,6 +70,17 @@ export default function SignupForm() {
                 placeholder="Enter your password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="user_name">Username</Label>
+              <Input
+                id="user_name"
+                type="text"
+                placeholder="Enter your username"
+                value={userName}
+                onChange={(e) => setUserName(e.target.value)}
                 required
               />
             </div>
